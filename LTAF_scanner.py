@@ -5,19 +5,25 @@
 # Option to return the 
 
 
-# i want to find every FILE.txt that has a 
+# find every SAMPLEFILE.txt that has at least 2 rows of data
 
 
 # specify directory
-top_dir = input('Specify the top directory to search:  ')
+top_dir = input('\nSpecify the top directory for search...   ')
 
-# search recursively?
-search_recurs = input('Search the directory recursively?  y/n')
+def check_recursive():
 
-# search AFs or LTs?
-search_aflt = input('Search for  ')
+    try:
+        recursive = int(input("\nSearch the directory recursively?  1 for Yes, 0 for No...   "))
+        if recursive < 0 or recursive > 1:
+            print("\nInvalid input...   ")
+            check_recursive()
+        elif recursive == 1:
+            print('\nSearching recursively... ')
+        elif recursive == 0:
+            print('\nSearching non-recursively... ')
+    except ValueError:
+        print("\nInvalid input...   ")
+        check_recursive()
 
-if search_recurse:
-    print('Searching recursively... ')
-else:
-    print('Searching non-recursively... ')
+check_recursive()
