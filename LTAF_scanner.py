@@ -5,7 +5,19 @@
 # Option to return the 
 
 
+# i want to find every FILE.txt that has a 
+
 
 # specify directory
 top_dir = input('Specify the top directory to search:  ')
-print(top_dir)
+
+# search recursively?
+search_recurs = input('Search the directory recursively?  y/n')
+
+# search AFs or LTs?
+search_aflt = input('Search for  ')
+
+if search_recurse:
+    print('Searching recursively... ')
+else:
+    print('Searching non-recursively... ')
