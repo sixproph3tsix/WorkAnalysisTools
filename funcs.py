@@ -1,170 +1,178 @@
-
-
-# Python Helper Code Snippet #5
+import math
 import tkinter as tk
 import os
-import glob
 import subprocess
 import sys
 import time
 
-from tkinter import Listbox, messagebox, Scrollbar, ttk
-from glob import glob
+from tkinter import ttk
 
+def display_files(found_files):
+    
+    original_files = list(found_files)
+    
+    def populate_tree(files):
+        for file in files:
+            file_name = os.path.basename(file)
+            file_size = round(os.path.getsize(file)/1000, 1)
+            tree.insert("", tk.END, values=(file_name, file, file_size))    
+    
+    def open_file(arg):
+        try:
+            selected_item = tree.focus()  # Get the selected item
+            selected = tree.item(selected_item)['values'][1]  # Get the file path from the second column
+            if arg == 1:
+                selected = os.path.dirname(selected)
+            if sys.platform == "win32":
+                os.startfile(selected)
+            elif sys.platform == "darwin":
+                subprocess.run(["open", selected])
+            else:  # Linux and other Unix-like systems
+                subprocess.run(["xdg-open", selected])
+        except Exception as e:
+            print(f"Error opening file: {e}")
 
-# Python Helper Code Snippet #10
-import os
+    def trim_files():
+        min_size = int(size_entry.get())
+        for item in tree.get_children():
+            if int(math.floor(float(tree.item(item)['values'][2]))) < min_size:
+                tree.delete(item)
 
-def find_files(directory, filename, recursive):
-    """
-    Searches for files with a given filename in a directory, optionally recursively.
+    def reset_list():
+        tree.delete(*tree.get_children())  # Clear the tree view
+        populate_tree(original_files)  # Repopulate with the original list
 
-    Parameters:
-    directory (str): The directory to search in.
-    filename (str): The name of the file to search for.
-    recursive (bool): Whether to search recursively or not.
+    def close_window():
+        root.destroy()
 
-    Returns:
-    list: A list of paths to the files found.
-    """
+    root = tk.Tk()
+    root.title("File Search Results")
+    
+    # Tree things
+    tree_frame = ttk.Frame(root)
+    tree_frame.pack(expand=True, fill="both")
+    
+    tree = ttk.Treeview(tree_frame, columns=("FileName", "FilePath", "FileSize"), show='headings', height=25)
+
+    tree.heading("FileName", text="File Name")
+    tree.heading("FilePath", text="Location")
+    tree.heading("FileSize", text="Size (KB)")
+
+    tree.column("FileName", width=250)
+    tree.column("FilePath", width=450)
+    tree.column("FileSize", width=50)
+
+    # Scrollbars
+    h_scroll = ttk.Scrollbar(tree_frame, orient="horizontal", command=tree.xview)
+    h_scroll.pack(side="bottom", fill="x")
+
+    tree.pack(expand=True, fill="both")
+    tree.configure(xscrollcommand=h_scroll.set)
+    
+    control_frame = ttk.Frame(root)
+    control_frame.pack(fill="x")
+
+    size_label = ttk.Label(control_frame, text="Trim File Size (KiloBytes):")
+    size_label.pack(side="left", padx=10, pady=10)
+
+    size_entry = ttk.Entry(control_frame)
+    size_entry.pack(side="left", padx=10, pady=10)
+
+    trim_button = ttk.Button(control_frame, text="Trim", command=trim_files)
+    trim_button.pack(side="left", padx=10, pady=10)
+
+    reset_button = ttk.Button(control_frame, text="Reset", command=reset_list)
+    reset_button.pack(side="left", padx=10, pady=10)
+
+    close_button = ttk.Button(control_frame, text="Close", command=close_window)
+    close_button.pack(side="right", padx=20, pady=10)
+
+    open_dirbutton = ttk.Button(control_frame, text="Open Location", command=lambda: open_file(1))
+    open_dirbutton.pack(side="right", padx=10, pady=10)
+
+    open_filebutton = ttk.Button(control_frame, text="Open File", command=lambda: open_file(0))
+    open_filebutton.pack(side="right", padx=10, pady=10)
+
+    # Initially populate the tree
+    populate_tree(found_files)
+
+    root.mainloop()
+
+def find_files(directory, search_term, recursive, search_type):
     matching_files = []
+
+    def file_matches(filename):
+        if search_type == 'exact':
+            return filename == search_term
+        elif search_type == 'contains':
+            return search_term in filename
+        elif search_type == 'af_number':
+            return filename.startswith(f'AF{search_term}')
+        else:
+            return False
 
     if recursive:
         for root, dirs, files in os.walk(directory):
-            if filename in files:
-                matching_files.append(os.path.join(root, filename))
+            for file in files:
+                if file_matches(file):
+                    matching_files.append(os.path.join(root, file))
     else:
-        # Non-recursive search
         for item in os.listdir(directory):
-            if os.path.isfile(os.path.join(directory, item)) and item == filename:
+            if os.path.isfile(os.path.join(directory, item)) and file_matches(item):
                 matching_files.append(os.path.join(directory, item))
 
     return matching_files
 
-# Example usage
-directory_to_search = '/path/to/directory'
-file_to_find = 'FILENAME'
-recursive_search = True  # Change to False for non-recursive search
-found_files = find_files(directory_to_search, file_to_find, recursive_search)
-print(found_files)
+def check_multiline(fpath):
+    """
+    Check if the file at the given path is a text file and has more than one line.
 
+    Parameters:
+    fpath (str): The path to the file.
 
+    Returns:
+    bool: True if the file is a text file and has more than one line, False otherwise.
+    """
+    # Check if the file exists and is a text file
+    if not os.path.isfile(fpath) or not fpath.lower().endswith('.txt'):
+        return False
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-def open_selected_path():
     try:
-        selected_index = listbox.curselection()[0]  # Get the index of the selected item
-        selected_path = paths[selected_index]  # Get the path at that index
-
-        # Open the path depending on the operating system
-        if sys.platform == "win32":
-            os.startfile(selected_path)
-        elif sys.platform == "darwin":  # macOS
-            subprocess.run(["open", selected_path])
-        else:  # Linux and other Unix-like systems
-            subprocess.run(["xdg-open", selected_path])
-    except IndexError:
-        messagebox.showinfo("Info", "Please select a path from the list")
+        with open(fpath, 'r') as file:
+            lines = file.readlines()
+            return len(lines) > 1
     except Exception as e:
-        messagebox.showerror("Error", f"An error occurred: {e}")
+        print(f"An error occurred: {e}")
+        return False
 
-    # List of paths to display (replace with your actual paths)
-    paths = [
-        '/path/to/local/file_or_directory',
-        '/path/to/another/file_or_directory',
-        '\\\\network\\path\\to\\file_or_directory'  # Example network path for Windows
-        # Add more paths as needed
-    ]
+def main():
+    directory = input("Enter the directory to search: ")
 
-def window():
-    # Set up the basic window
-    root = tk.Tk()
-    root.title("Path Selector")
+    recurs = input("Search the directory recursively? 1 for Yes, 0 for No: ")
+    recursive = recurs.strip() == "1"
+
+    choice = input("Choose an option (1-3):\n1) Search for file EXACT\n2) Search for file CONTAINS\n3) Search for AF number\n")
+
+    if choice in ['1', '2']:
+        str_file = input("\nEnter the string to search for: ")
+        search_type = 'exact' if choice == '1' else 'contains'
+        time.sleep(1)
+        print("\n\nSearching......")
+        found_files = find_files(directory, str_file, recursive, search_type)
+    elif choice == '3':
+        str_afnum = input("Enter the AF number: ")
+        time.sleep(1)
+        print("\n\nSearching...... ")
+        found_files = find_files(directory, str_afnum, recursive, 'af_number')
+    else:
+        print("Invalid choice")
+        return
+
+    print("\n\nSuccess! Displaying " + str(len(found_files)) +" results... ")
     
-    # Create a Listbox widget
-    listbox = Listbox(root, width=50)
-    listbox.pack(padx=5, pady=10)
+    time.sleep(2)
     
-    # Create a frame to contain the Listbox and Scrollbar
-    frame = tk.Frame(root)
-    frame.pack(padx=10, pady=10)
-    
-    # Create a vertical Scrollbar
-    v_scroll = Scrollbar(frame, orient="vertical")
-    
-    # Create a Listbox widget with a specified width and set it to be scrollable
-    listbox = Listbox(frame, width=50, yscrollcommand=v_scroll.set)
-    listbox.pack(side="left", fill="y")
-    
-    # Configure the Scrollbar
-    v_scroll.config(command=listbox.yview)
-    v_scroll.pack(side="right", fill="y")
-    
-    # Add paths to the Listbox
-    for path in paths:
-        listbox.insert(tk.END, path)
-    
-    # Add a button that will trigger the opening of the selected path
-    open_button = tk.Button(root, text="Open Selected Path", command=open_selected_path)
-    open_button.pack(pady=10)
-    
-    # Start the GUI event loop
-    root.mainloop()
-    
+    display_files(found_files)
 
-
-
-
-def check_recursive():
-
-    try:
-        recursive = int(input("\nSearch the directory recursively?  1 for Yes, 0 for No...   "))
-        if recursive < 0 or recursive > 1:
-            print("\nInvalid input...   ")
-            check_recursive()
-        else:
-            return recursive
-    except ValueError:
-        print("\nInvalid input...   ")
-        check_recursive()
-
-    return recursive
-
-
-
-
-
-
-# Python Helper Code Snippet #8
-
-def progress():
-    progress_bar['maximum'] = 100
-    for i in range(101):
-        time.sleep(0.05)  # Simulate long-running task
-        progress_bar['value'] = i
-        root.update_idletasks()  # Update GUI
-
-    root = tk.Tk()
-    root.title("Progress Bar Example")
-    
-    # Create Progressbar widget
-    progress_bar = ttk.Progressbar(root, orient='horizontal', mode='determinate', length=300)
-    progress_bar.pack(pady=20)
-    
-    # Create a button to start the progress
-    start_button = tk.Button(root, text='Start', command=progress)
-    start_button.pack(pady=10)
-    
-    root.mainloop()
+if __name__ == "__main__":
+    main()

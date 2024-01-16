@@ -12,41 +12,24 @@ def display_files(found_files):
     
     original_files = list(found_files)
     
-    def open_file_directory(file_path):
-        """
-        Opens the directory containing the given file.
-    
-        Parameters:
-        file_path (str): The full path to the file.
-        """
-        directory = os.path.dirname(file_path)
-    
-        try:
-            if sys.platform == "win32":
-                os.startfile(directory)
-            elif sys.platform == "darwin":
-                subprocess.run(["open", directory])
-            else:  # Linux and other Unix-like systems
-                subprocess.run(["xdg-open", directory])
-        except Exception as e:
-            print(f"Error opening directory: {e}")    
-    
     def populate_tree(files):
         for file in files:
             file_name = os.path.basename(file)
             file_size = round(os.path.getsize(file)/1000, 1)
             tree.insert("", tk.END, values=(file_name, file, file_size))    
     
-    def open_selected_file():
+    def open_file(arg):
         try:
             selected_item = tree.focus()  # Get the selected item
-            selected_file = tree.item(selected_item)['values'][1]  # Get the file path from the second column
+            selected = tree.item(selected_item)['values'][1]  # Get the file path from the second column
+            if arg == 1:
+                selected = os.path.dirname(selected)
             if sys.platform == "win32":
-                os.startfile(selected_file)
+                os.startfile(selected)
             elif sys.platform == "darwin":
-                subprocess.run(["open", selected_file])
+                subprocess.run(["open", selected])
             else:  # Linux and other Unix-like systems
-                subprocess.run(["xdg-open", selected_file])
+                subprocess.run(["xdg-open", selected])
         except Exception as e:
             print(f"Error opening file: {e}")
 
@@ -63,6 +46,27 @@ def display_files(found_files):
     def close_window():
         root.destroy()
 
+    def treeview_sort_column(tv, col, reverse):
+        
+        # Determine the index of the column based on its heading
+        col_index = tv["columns"].index(col)
+        
+        # Retrieve the data from the treeview as a list
+        l = [(tv.item(k)["values"], k) for k in tv.get_children('')]
+        
+        # Check if we're sorting the File Size column and handle it as integers
+        if col == "FileSize":
+            l.sort(key=lambda t: int(math.floor(float(t[0][col_index]))), reverse=reverse)
+        else:
+            l.sort(key=lambda t: t[0][col_index], reverse=reverse)
+    
+        # Rearrange the items in the treeview according to the sorted list
+        for index, (val, k) in enumerate(l):
+            tv.move(k, '', index)
+    
+        # Reverse the sort order for the next time the column is clicked
+        tv.heading(col, command=lambda: treeview_sort_column(tv, col, not reverse))
+
     root = tk.Tk()
     root.title("File Search Results")
     
@@ -72,13 +76,13 @@ def display_files(found_files):
     
     tree = ttk.Treeview(tree_frame, columns=("FileName", "FilePath", "FileSize"), show='headings', height=25)
 
-    tree.heading("FileName", text="File Name")
-    tree.heading("FilePath", text="Location")
-    tree.heading("FileSize", text="File Size (KB)")
+    tree.heading("FileName", text="File Name", command=lambda: treeview_sort_column(tree, "FileName", False))
+    tree.heading("FilePath", text="File Path", command=lambda: treeview_sort_column(tree, "FilePath", False))
+    tree.heading("FileSize", text="Size (KB)", command=lambda: treeview_sort_column(tree, "FileSize", False))
 
     tree.column("FileName", width=250)
-    tree.column("FilePath", width=250)
-    tree.column("FileSize", width=50)
+    tree.column("FilePath", width=550)
+    tree.column("FileSize", width=75)
 
     # Scrollbars
     h_scroll = ttk.Scrollbar(tree_frame, orient="horizontal", command=tree.xview)
@@ -90,7 +94,7 @@ def display_files(found_files):
     control_frame = ttk.Frame(root)
     control_frame.pack(fill="x")
 
-    size_label = ttk.Label(control_frame, text="Trim File Size (KiloBytes):")
+    size_label = ttk.Label(control_frame, text="Trim File Size (KB):")
     size_label.pack(side="left", padx=10, pady=10)
 
     size_entry = ttk.Entry(control_frame)
@@ -102,11 +106,14 @@ def display_files(found_files):
     reset_button = ttk.Button(control_frame, text="Reset", command=reset_list)
     reset_button.pack(side="left", padx=10, pady=10)
 
-    open_button = ttk.Button(control_frame, text="Open", command=open_selected_file)
-    open_button.pack(side="right", padx=10, pady=10)
-
     close_button = ttk.Button(control_frame, text="Close", command=close_window)
     close_button.pack(side="right", padx=20, pady=10)
+
+    open_dirbutton = ttk.Button(control_frame, text="Open Location", command=lambda: open_file(1))
+    open_dirbutton.pack(side="right", padx=10, pady=10)
+
+    open_filebutton = ttk.Button(control_frame, text="Open File", command=lambda: open_file(0))
+    open_filebutton.pack(side="right", padx=10, pady=10)
 
     # Initially populate the tree
     populate_tree(found_files)
@@ -163,18 +170,20 @@ def check_multiline(fpath):
 def main():
     directory = input("Enter the directory to search: ")
 
-    recurs = input("Search the directory recursively? 1 for Yes, 0 for No: ")
+    recurs = input("\nSearch recursively? 1 for Yes, 0 for No: \n\n")
     recursive = recurs.strip() == "1"
 
-    choice = input("Choose an option (1-3):\n1) Search for file EXACT\n2) Search for file CONTAINS\n3) Search for AF number\n")
+    choice = input("\nChoose an option (1-3):\n1) EXACT String Search\n2) CONTAINS String Search\n3) AF Number Search\n\n")
 
     if choice in ['1', '2']:
-        str_file = input("\nEnter the string to search for: ")
+        str_file = input("\nEnter the search string: ")
         search_type = 'exact' if choice == '1' else 'contains'
+        time.sleep(1)
         print("\n\nSearching......")
         found_files = find_files(directory, str_file, recursive, search_type)
     elif choice == '3':
         str_afnum = input("Enter the AF number: ")
+        time.sleep(1)
         print("\n\nSearching...... ")
         found_files = find_files(directory, str_afnum, recursive, 'af_number')
     else:
