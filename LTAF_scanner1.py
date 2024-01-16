@@ -120,7 +120,32 @@ def display_files(found_files):
 
     root.mainloop()
 
+def check_multiline(fpath):
+    """
+    Check if the file at the given path is a text file and has more than one line.
+
+    Parameters:
+    fpath (str): The path to the file.
+
+    Returns:
+    bool: True if the file is a text file and has more than one line, False otherwise.
+    """
+    # Check if the file exists and is a text file
+    if not os.path.isfile(fpath) or not fpath.lower().endswith('.txt'):
+        return False
+
+    try:
+        with open(fpath, 'r') as file:
+            lines = file.readlines()
+            return len(lines) > 1
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False
+    
 def find_files(directory, search_term, recursive, search_type):
+
+    time.sleep(1)
+
     matching_files = []
 
     def file_matches(filename):
@@ -145,28 +170,6 @@ def find_files(directory, search_term, recursive, search_type):
 
     return matching_files
 
-def check_multiline(fpath):
-    """
-    Check if the file at the given path is a text file and has more than one line.
-
-    Parameters:
-    fpath (str): The path to the file.
-
-    Returns:
-    bool: True if the file is a text file and has more than one line, False otherwise.
-    """
-    # Check if the file exists and is a text file
-    if not os.path.isfile(fpath) or not fpath.lower().endswith('.txt'):
-        return False
-
-    try:
-        with open(fpath, 'r') as file:
-            lines = file.readlines()
-            return len(lines) > 1
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return False
-
 def main():
     directory = input("Enter the directory to search: ")
 
@@ -182,13 +185,9 @@ def main():
     if choice in ['1', '2', '3']:
         str_file = input("\nEnter search criteria: ")
         search_type = 'exact' if choice == '1' else 'contains'
-        time.sleep(1)
-        print("\n\nSearching......")
         found_files = find_files(directory, str_file, recursive, search_type)
     elif choice == '4':
         str_afnum = input("Enter the AF number: ")
-        time.sleep(1)
-        print("\n\nSearching...... ")
         found_files = find_files(directory, str_afnum, recursive, 'af_number')
     else:
         print("Invalid choice")
