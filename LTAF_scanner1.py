@@ -1,4 +1,6 @@
-# Python Helper Code Snippet #12
+# LEFT OFF SETTING UP MODE 4
+
+
 import math
 import tkinter as tk
 import os
@@ -8,15 +10,40 @@ import time
 
 from tkinter import ttk
 
-def display_files(found_files):
+def display_files(found_files, mode):
     
     original_files = list(found_files)
+    
+    def line_count(afpath):
+        """
+        Count the number of lines in the file at the given path.
+    
+        Parameters:
+        fpath (str): The path to the file.
+    
+        Returns:
+        int: The number of lines in the file, or 0 if the file is not a text file or does not exist.
+        """
+        # Check if the file exists and is a text file
+        if not os.path.isfile(afpath) or not afpath.lower().endswith('.txt'):
+            return 0
+        try:
+            with open(afpath, 'r') as file:
+                lines = file.readlines()
+                return len(lines)
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return 0
     
     def populate_tree(files):
         for file in files:
             file_name = os.path.basename(file)
-            file_size = round(os.path.getsize(file)/1000, 1)
-            tree.insert("", tk.END, values=(file_name, file, file_size))    
+            file_path = os.path.dirname(file)
+            if mode == 4:
+                line_count(file)
+            else:
+                file_size = round(os.path.getsize(file)/1000, 1)
+                tree.insert("", tk.END, values=(file_name, file_path, file_size))    
     
     def open_file(arg):
         try:
@@ -68,21 +95,21 @@ def display_files(found_files):
         tv.heading(col, command=lambda: treeview_sort_column(tv, col, not reverse))
 
     root = tk.Tk()
-    root.title("File Search Results")
+    root.title("Search Results")
     
     # Tree things
     tree_frame = ttk.Frame(root)
     tree_frame.pack(expand=True, fill="both")
     
-    tree = ttk.Treeview(tree_frame, columns=("FileName", "FilePath", "FileSize"), show='headings', height=25)
+    tree = ttk.Treeview(tree_frame, columns=("FileName", "FileLocation", "FileSize"), show='headings', height=25)
 
     tree.heading("FileName", text="File Name", command=lambda: treeview_sort_column(tree, "FileName", False))
-    tree.heading("FilePath", text="File Path", command=lambda: treeview_sort_column(tree, "FilePath", False))
+    tree.heading("FileLocation", text="File Location", command=lambda: treeview_sort_column(tree, "FileLocation", False))
     tree.heading("FileSize", text="Size (KB)", command=lambda: treeview_sort_column(tree, "FileSize", False))
 
     tree.column("FileName", width=250)
-    tree.column("FilePath", width=550)
-    tree.column("FileSize", width=75)
+    tree.column("FileLocation", width=350)
+    tree.column("FileSize", width=100)
 
     # Scrollbars
     h_scroll = ttk.Scrollbar(tree_frame, orient="horizontal", command=tree.xview)
@@ -94,7 +121,7 @@ def display_files(found_files):
     control_frame = ttk.Frame(root)
     control_frame.pack(fill="x")
 
-    size_label = ttk.Label(control_frame, text="Trim File Size (KB):")
+    size_label = ttk.Label(control_frame, text="Trim Less Than (KB):")
     size_label.pack(side="left", padx=10, pady=10)
 
     size_entry = ttk.Entry(control_frame)
@@ -119,34 +146,11 @@ def display_files(found_files):
     populate_tree(found_files)
 
     root.mainloop()
-
-def check_multiline(fpath):
-    """
-    Check if the file at the given path is a text file and has more than one line.
-
-    Parameters:
-    fpath (str): The path to the file.
-
-    Returns:
-    bool: True if the file is a text file and has more than one line, False otherwise.
-    """
-    # Check if the file exists and is a text file
-    if not os.path.isfile(fpath) or not fpath.lower().endswith('.txt'):
-        return False
-
-    try:
-        with open(fpath, 'r') as file:
-            lines = file.readlines()
-            return len(lines) > 1
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return False
     
 def find_files(directory, search_term, recursive, search_type):
 
     time.sleep(1)
-
-    matching_files = []
+    found_files = []    
 
     def file_matches(filename):
         if search_type == 'exact':
@@ -162,13 +166,13 @@ def find_files(directory, search_term, recursive, search_type):
         for root, dirs, files in os.walk(directory):
             for file in files:
                 if file_matches(file):
-                    matching_files.append(os.path.join(root, file))
+                    found_files.append(os.path.join(root, file))
     else:
         for item in os.listdir(directory):
             if os.path.isfile(os.path.join(directory, item)) and file_matches(item):
-                matching_files.append(os.path.join(directory, item))
+                found_files.append(os.path.join(directory, item))
 
-    return matching_files
+    return found_files
 
 def main():
     directory = input("Enter the directory to search: ")
@@ -176,19 +180,22 @@ def main():
     recurs = input("\nSearch recursively? 1 for Yes, 0 for No: \n\n")
     recursive = recurs.strip() == "1"
 
-    choice = input("\nChoose an option (1-4): " + \
+    mode = input("\nChoose a search mode (1-4): " + \
                    "\n1) File Name EXACT" + \
                    "\n2) File Name CONTAINS" + \
                    "\n3) File Data CONTAINS" + \
                    "\n4) AF Search\n\n")
 
-    if choice in ['1', '2', '3']:
+    if mode in ['1', '2', '3']:
         str_file = input("\nEnter search criteria: ")
-        search_type = 'exact' if choice == '1' else 'contains'
+        search_type = 'exact' if mode == '1' else 'contains'
         found_files = find_files(directory, str_file, recursive, search_type)
-    elif choice == '4':
-        str_afnum = input("Enter the AF number: ")
+    elif mode == '4':
+        str_afnum = input("\nEnter an AF number: ")
         found_files = find_files(directory, str_afnum, recursive, 'af_number')
+        print("\n\nSuccess! Displaying " + str(len(found_files)) +" results... ")
+        display_files(found_files, mode)
+        return
     else:
         print("Invalid choice")
         return
